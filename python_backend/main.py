@@ -1,10 +1,9 @@
-"""Servidor FastAPI para cálculos de engenharia de foguetes"""
-
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Any, Optional
 import uvicorn
+import os
 
 # Importar módulos de cálculo
 from verificacao_estrutural import calcular_verificacao_estrutural
@@ -12,18 +11,17 @@ from design_tubeiras import calcular_design_tubeira
 from ezimpulse import calcular_performance_ezimpulse
 
 app = FastAPI(
-    title="Rocket Engineering API",
+    title="Escola Foguete API",
     description="API para cálculos de engenharia de foguetes",
     version="1.0.0"
 )
 
-# Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Em produção, especificar domínios permitidos
+    allow_origins=["*"],  # Aceita requisições de qualquer site (GitHub Pages, Localhost, etc)
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"],  # Aceita todos os métodos (GET, POST, OPTIONS, etc)
+    allow_headers=["*"],  # Aceita todos os cabeçalhos
 )
 
 # Modelos de requisição
@@ -35,6 +33,7 @@ class VerificacaoEstruturalRequest(BaseModel):
     te_b: Optional[float] = 205
     d_p: Optional[float] = 9.03
     df_p: Optional[float] = 10
+    te_p: Optional[float] = 400 # Adicionado parâmetro faltante
 
 class DesignTubeiraRequest(BaseModel):
     F: Optional[float] = 544.81
@@ -56,13 +55,9 @@ class PerformanceRequest(BaseModel):
 @app.get("/")
 def read_root():
     return {
-        "message": "Rocket Engineering API",
+        "message": "API da Escola Foguete está Online! 🚀",
         "version": "1.0.0",
-        "endpoints": [
-            "/api/verificacao-estrutural",
-            "/api/design-tubeira",
-            "/api/performance"
-        ]
+        "docs_url": "/docs"
     }
 
 @app.get("/health")
@@ -71,48 +66,34 @@ def health_check():
 
 @app.post("/api/verificacao-estrutural")
 def verificacao_estrutural(request: VerificacaoEstruturalRequest):
-    """
-    Endpoint para cálculo de verificação estrutural.
-    
-    Calcula tensões, fatores de segurança e dimensionamento de:
-    - Case (cilindro de pressão)
-    - Bulkhead (tampa)
-    - Parafusos
-    """
     try:
         params = request.dict()
         resultado = calcular_verificacao_estrutural(params)
         return resultado
     except Exception as e:
+        print(f"Erro no cálculo estrutural: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/design-tubeira")
 def design_tubeira(request: DesignTubeiraRequest):
-    """
-    Endpoint para cálculo de design de tubeira.
-    
-    Calcula geometria e parâmetros de tubeira cônica ou parabólica.
-    """
     try:
         params = request.dict()
         resultado = calcular_design_tubeira(params)
         return resultado
     except Exception as e:
+        print(f"Erro no cálculo de tubeira: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/performance")
 def calcular_performance(request: PerformanceRequest):
-    """
-    Endpoint para cálculo de performance do foguete.
-    
-    Simula trajetória e calcula apogeu, velocidade máxima, etc.
-    """
     try:
         params = request.dict()
         resultado = calcular_performance_ezimpulse(params)
         return resultado
     except Exception as e:
+        print(f"Erro no cálculo de performance: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)

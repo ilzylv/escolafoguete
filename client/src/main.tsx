@@ -37,8 +37,10 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+// Quando estiver rodando no GitHub Pages (produção), usa o Render.
+// Quando estiver rodando localmente (npm run dev), usa o proxy local.
 const BACKEND_URL = import.meta.env.PROD
-  ? "https://escolafoguete.onrender.com/api/trpc"
+  ? "https://escolafoguete.onrender.com"
   : "/api/trpc";
 
 const trpcClient = trpc.createClient({
