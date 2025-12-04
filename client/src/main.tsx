@@ -37,10 +37,14 @@ queryClient.getMutationCache().subscribe(event => {
   }
 });
 
+const BACKEND_URL = import.meta.env.PROD
+  ? "https://escolafoguete.onrender.com/api/trpc"
+  : "/api/trpc";
+
 const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
-      url: "/api/trpc",
+      url: BACKEND_URL,
       transformer: superjson,
       fetch(input, init) {
         return globalThis.fetch(input, {
