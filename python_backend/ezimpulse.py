@@ -1,4 +1,4 @@
-"""
+""""
 EZImpulse Calculator - Implementação baseada no método simplificado de Richard Nakka
 Referência: http://www.nakka-rocketry.net/articles/altcalc.pdf
 
@@ -96,7 +96,7 @@ def calcular_performance_ezimpulse(params: Dict[str, Any]) -> Dict[str, Any]:
     t2_corrected_s = 0
     N = 0
 
-    # Loop de convergência
+    # Loop de convergência (Goal Seek)
     for _ in range(50):
         # Aceleração efetiva (F/m - g)
         accel_net = (F_avg_n / avg_mass_kg) - g
@@ -141,7 +141,7 @@ def calcular_performance_ezimpulse(params: Dict[str, Any]) -> Dict[str, Any]:
         else:
             F_avg_n *= 1.5
 
-    # Resultados finais corrigidos
+    # Resultados Finais corrigidos
     z1_corrected_m = factors["fzbo"] * z1_m
     v1_corrected_ms = factors["fv"] * v1_ms
     t2_corrected_s = factors["ft"] * t2_s
@@ -152,4 +152,23 @@ def calcular_performance_ezimpulse(params: Dict[str, Any]) -> Dict[str, Any]:
 
     warnings = []
     if N > 2000: warnings.append(f"Alerta: N ({N:.0f}) > 2000. Fora da faixa de precisão do método.")
-    if isp_s > 26
+    if isp_s > 260: warnings.append(f"Alerta: Isp Requerido ({isp_s:.0f}s) é muito alto para sólidos amadores.")
+
+    return {
+        "parametros_calculados": {
+            "propellant_mass_kg": float(propellant_mass_kg),
+            "burnout_velocity_ms": float(v1_corrected_ms),
+            "mach_burnout": float(mach_burnout),
+            "total_impulse_ns": float(total_impulse_ns),
+            "motor_class": get_motor_class(total_impulse_ns),
+            "burnout_altitude_m": float(z1_corrected_m),
+            "average_thrust_n": float(F_avg_n),
+            "specific_impulse_s": float(isp_s),
+            "drag_influence_number": float(N),
+            "peak_altitude_m": float(z2_corrected_m),
+            "time_to_apogee_s": float(t2_corrected_s),
+            "max_acceleration_g": float(F_avg_n / avg_mass_kg / g),
+            "drag_factors": factors,
+            "warnings": warnings
+        }
+    }
