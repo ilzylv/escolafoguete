@@ -1,11 +1,13 @@
-import { useState } from "react";
+imporimport { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Play, AlertTriangle, Info } from "lucide-react";
+import { Loader2, Play, AlertTriangle, Info, TrendingUp, Rocket, Target, Wind, Weight } from "lucide-react";
 import { BlockMath, InlineMath } from 'react-katex';
 import 'katex/dist/katex.min.css';
 
@@ -18,14 +20,75 @@ interface EZImpulseParams {
   drag_coefficient: number;
 }
 
+// CORREÇÃO: Componente movido para FORA da função principal
+const InputWithTooltip = ({
+                            id,
+                            label,
+                            value,
+                            onChange,
+                            tooltip,
+                            unit
+                          }: {
+  id: string,
+  label: string,
+  value: number,
+  onChange: (val: string) => void,
+  tooltip: React.ReactNode,
+  unit?: string
+}) => (
+  <div className="space-y-2">
+    <div className="flex items-center gap-2">
+      <Label htmlFor={id} className="font-medium text-sm">{label}</Label>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors" />
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs p-3 text-xs">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
+    </div>
+    <div className="relative">
+      <Input
+        id={id}
+        type="number"
+        step="any"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="pr-12"
+      />
+      {unit && (
+        <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-medium pointer-events-none">
+          {unit}
+        </span>
+      )}
+    </div>
+  </div>
+);
+
+// CORREÇÃO: Componente movido para FORA da função principal
+const ResultCard = ({ title, value, unit, icon: Icon, colorClass, highlight }: any) => (
+  <div className={`flex items-center p-3 rounded-lg border transition-colors ${highlight ? 'bg-primary/5 border-primary/20' : 'bg-muted/40 hover:bg-muted/60'}`}>
+    <div className={`p-2 rounded-full mr-3 ${colorClass} bg-opacity-10`}>
+      <Icon className={`h-4 w-4 ${colorClass.replace('bg-', 'text-')}`} />
+    </div>
+    <div>
+      <p className="text-xs text-muted-foreground font-medium">{title}</p>
+      <p className="text-lg font-bold">
+        {value} <span className="text-xs font-normal text-muted-foreground">{unit}</span>
+      </p>
+    </div>
+  </div>
+);
+
 export default function Performance() {
   const [params, setParams] = useState<EZImpulseParams>({
     target_apogee_m: 500,
-    burn_time_s: 3.0,
-    rocket_empty_mass_kg: 1.5,
-    propellant_mass_percent: 20,
-    rocket_diameter_cm: 8,
-    drag_coefficient: 0.4,
+    burn_time_s: 1.0,
+    rocket_empty_mass_kg: 2.5,
+    propellant_mass_percent: 14,
+    rocket_diameter_cm: 5.0,
+    drag_coefficient: 0.45,
   });
 
   const mutation = trpc.calculosEngenharia.performance.useMutation();
@@ -44,322 +107,295 @@ export default function Performance() {
   const results = mutation.data?.parametros_calculados;
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">EZImpulse - Cálculo de Performance</h1>
-        <p className="text-muted-foreground">
-          Calculadora baseada no método simplificado de Richard Nakka para estimar o impulso total necessário para atingir um apogeu desejado
-        </p>
-      </div>
-
-      <Alert className="mb-6">
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          <strong>Sobre o EZImpulse:</strong> Esta ferramenta calcula o <strong>impulso total necessário</strong> do motor para atingir um apogeu alvo, 
-          considerando arrasto aerodinâmico. NÃO simula a trajetória completa. Use software como RASAero ou OpenRocket para simulações detalhadas.
-        </AlertDescription>
-      </Alert>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Painel de inputs */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Parâmetros de Entrada</CardTitle>
-            <CardDescription>Configure as características do foguete e objetivos da missão</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="target_apogee_m">
-                Apogeu Alvo (metros)
-              </Label>
-              <Input
-                id="target_apogee_m"
-                type="number"
-                step="10"
-                value={params.target_apogee_m}
-                onChange={(e) => handleInputChange("target_apogee_m", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Altitude máxima desejada</p>
+    <TooltipProvider delayDuration={200}>
+      <div className="container mx-auto py-8 max-w-6xl">
+        <div className="mb-8 flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-primary/10 rounded-xl">
+              <TrendingUp className="h-6 w-6 text-primary" />
             </div>
+            <h1 className="text-3xl font-bold tracking-tight">Predição de Performance (EZImpulse)</h1>
+          </div>
+          <p className="text-muted-foreground text-lg ml-1">
+            Ferramenta para estimar requisitos do motor para atingir um apogeu alvo.
+          </p>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="burn_time_s">
-                Tempo de Queima do Motor (segundos)
-              </Label>
-              <Input
-                id="burn_time_s"
-                type="number"
-                step="0.1"
-                value={params.burn_time_s}
-                onChange={(e) => handleInputChange("burn_time_s", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Duração da queima do propelente</p>
-            </div>
+        <Alert className="mb-8 border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900">
+          <Info className="h-4 w-4 text-amber-600" />
+          <AlertDescription className="text-amber-800 dark:text-amber-200 text-sm flex flex-wrap gap-1">
+            <strong>Nota:</strong> Esta ferramenta calcula o <strong>impulso total necessário</strong> para atingir uma altitude específica (<em>Goal Seeking</em>). Não é uma simulação de voo completa (6-DOF), servindo apenas para o dimensionamento inicial do motor.
+          </AlertDescription>
+        </Alert>
 
-            <div className="space-y-2">
-              <Label htmlFor="rocket_empty_mass_kg">
-                Massa Vazia do Foguete (kg)
-              </Label>
-              <Input
-                id="rocket_empty_mass_kg"
-                type="number"
-                step="0.1"
-                value={params.rocket_empty_mass_kg}
-                onChange={(e) => handleInputChange("rocket_empty_mass_kg", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Massa do foguete SEM propelente</p>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Inputs */}
+          <Card className="lg:col-span-4 h-fit sticky top-6 shadow-md border-t-4 border-t-primary">
+            <CardHeader className="bg-muted/30 pb-4">
+              <CardTitle className="text-lg">Parâmetros de Entrada</CardTitle>
+              <CardDescription>Defina o objetivo e o veículo</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
 
-            <div className="space-y-2">
-              <Label htmlFor="propellant_mass_percent">
-                Percentual de Massa de Propelente (%)
-              </Label>
-              <Input
-                id="propellant_mass_percent"
-                type="number"
-                step="1"
-                value={params.propellant_mass_percent}
-                onChange={(e) => handleInputChange("propellant_mass_percent", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Massa de propelente relativa à massa vazia (tipicamente 15-30%)
-              </p>
-            </div>
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Target className="h-3 w-3" /> Objetivo & Motor
+                </h4>
+                <InputWithTooltip
+                  id="target_apogee_m"
+                  label="Apogeu Alvo"
+                  value={params.target_apogee_m}
+                  onChange={(v) => handleInputChange("target_apogee_m", v)}
+                  tooltip="Altitude máxima vertical desejada (em metros) a partir do solo."
+                  unit="m"
+                />
+                <InputWithTooltip
+                  id="burn_time_s"
+                  label="Tempo de Queima"
+                  value={params.burn_time_s}
+                  onChange={(v) => handleInputChange("burn_time_s", v)}
+                  tooltip="Tempo total de operação do motor (do início da pressão até a queda de empuxo)."
+                  unit="s"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="rocket_diameter_cm">
-                Diâmetro do Foguete (cm)
-              </Label>
-              <Input
-                id="rocket_diameter_cm"
-                type="number"
-                step="0.1"
-                value={params.rocket_diameter_cm}
-                onChange={(e) => handleInputChange("rocket_diameter_cm", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">Diâmetro máximo do corpo do foguete</p>
-            </div>
+              <Separator />
 
-            <div className="space-y-2">
-              <Label htmlFor="drag_coefficient">
-                Coeficiente de Arrasto (Cd)
-              </Label>
-              <Input
-                id="drag_coefficient"
-                type="number"
-                step="0.01"
-                value={params.drag_coefficient}
-                onChange={(e) => handleInputChange("drag_coefficient", e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                0.35 (aerodinâmico), 0.40 (padrão), 0.45-0.50 (básico)
-              </p>
-            </div>
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Rocket className="h-3 w-3" /> Veículo
+                </h4>
+                <InputWithTooltip
+                  id="rocket_empty_mass_kg"
+                  label="Massa Vazia"
+                  value={params.rocket_empty_mass_kg}
+                  onChange={(v) => handleInputChange("rocket_empty_mass_kg", v)}
+                  tooltip={<p>Massa do foguete <strong>SEM</strong> propelente.<br/>Inclui fuselagem, eletrônica, paraquedas e motor vazio.</p>}
+                  unit="kg"
+                />
+                <InputWithTooltip
+                  id="propellant_mass_percent"
+                  label="% Massa Propelente"
+                  value={params.propellant_mass_percent}
+                  onChange={(v) => handleInputChange("propellant_mass_percent", v)}
+                  tooltip={<p>Razão entre massa de propelente e massa vazia.<br/>Ex: Se m_vazia=2.5kg e m_prop=0.35kg, valor = 14%.</p>}
+                  unit="%"
+                />
+                <InputWithTooltip
+                  id="rocket_diameter_cm"
+                  label="Diâmetro Máximo"
+                  value={params.rocket_diameter_cm}
+                  onChange={(v) => handleInputChange("rocket_diameter_cm", v)}
+                  tooltip="Maior diâmetro da fuselagem. Usado para cálculo de arrasto aerodinâmico."
+                  unit="cm"
+                />
+              </div>
 
-            <Button
-              onClick={handleCalculate}
-              disabled={mutation.isPending}
-              className="w-full"
-            >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Calculando...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Calcular Impulso Necessário
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+              <Separator />
 
-        {/* Painel de resultados */}
-        <div className="space-y-6">
-          {mutation.isError && (
-            <Alert variant="destructive">
-              <AlertTriangle className="h-4 w-4" />
-              <AlertDescription>
-                Erro ao calcular: {mutation.error.message}
-              </AlertDescription>
-            </Alert>
-          )}
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Wind className="h-3 w-3" /> Aerodinâmica
+                </h4>
+                <InputWithTooltip
+                  id="drag_coefficient"
+                  label="Coeficiente de Arrasto (Cd)"
+                  value={params.drag_coefficient}
+                  onChange={(v) => handleInputChange("drag_coefficient", v)}
+                  tooltip={
+                    <ul className="list-disc pl-3 space-y-1">
+                      <li><strong>0.35:</strong> Acabamento excelente, liso.</li>
+                      <li><strong>0.45:</strong> Acabamento padrão (parafusos expostos).</li>
+                      <li><strong>0.55+:</strong> Acabamento básico/rústico.</li>
+                    </ul>
+                  }
+                />
+              </div>
 
-          {results && (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>Resultados Principais</CardTitle>
-                  <CardDescription>Parâmetros do motor necessário</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Impulso Total Necessário</p>
-                      <p className="text-2xl font-bold">{results.total_impulse_ns?.toFixed(1) ?? 'N/A'} N·s</p>
+              <Button
+                onClick={handleCalculate}
+                disabled={mutation.isPending}
+                className="w-full shadow-lg hover:shadow-xl transition-all font-semibold"
+                size="lg"
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Calculando...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-5 w-5 fill-current" />
+                    Calcular Requisitos
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Resultados */}
+          <div className="lg:col-span-8 space-y-6">
+            {mutation.isError && (
+              <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  Erro ao calcular: {mutation.error.message}
+                </AlertDescription>
+              </Alert>
+            )}
+
+            {results && (
+              <>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Requisitos do Motor</CardTitle>
+                    <CardDescription>Para atingir {results.peak_altitude_m?.toFixed(0)}m de apogeu</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <ResultCard
+                          title="Impulso Total Necessário"
+                          value={results.total_impulse_ns?.toFixed(1)}
+                          unit="N·s"
+                          icon={Rocket}
+                          colorClass="text-purple-600 bg-purple-100"
+                          highlight={true}
+                        />
+                      </div>
+
+                      <ResultCard
+                        title="Classe do Motor"
+                        value={results.motor_class}
+                        unit=""
+                        icon={Target}
+                        colorClass="text-blue-600 bg-blue-100"
+                      />
+                      <ResultCard
+                        title="Empuxo Médio"
+                        value={results.average_thrust_n?.toFixed(1)}
+                        unit="N"
+                        icon={TrendingUp}
+                        colorClass="text-green-600 bg-green-100"
+                      />
+                      <ResultCard
+                        title="Isp Necessário"
+                        value={results.specific_impulse_s?.toFixed(0)}
+                        unit="s"
+                        icon={Wind}
+                        colorClass="text-orange-600 bg-orange-100"
+                      />
+                      <ResultCard
+                        title="Massa Propelente"
+                        value={results.propellant_mass_kg?.toFixed(3)}
+                        unit="kg"
+                        icon={Weight}
+                        colorClass="text-slate-600 bg-slate-100"
+                      />
                     </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Classe do Motor</p>
-                      <p className="text-2xl font-bold">{results.motor_class ?? 'N/A'}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Empuxo Médio Necessário</p>
-                      <p className="text-xl font-semibold">{results.average_thrust_n?.toFixed(1) ?? 'N/A'} N</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Isp Necessário</p>
-                      <p className="text-xl font-semibold">{results.specific_impulse_s?.toFixed(0) ?? 'N/A'} s</p>
-                    </div>
-                  </div>
 
-                  {results.warnings && results.warnings.length > 0 && (
-                    <Alert variant="destructive">
-                      <AlertTriangle className="h-4 w-4" />
-                      <AlertDescription>
+                    {results.warnings && results.warnings.length > 0 && (
+                      <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
                         {results.warnings.map((warning: string, i: number) => (
-                          <div key={i}>{warning}</div>
+                          <div key={i} className="flex gap-2 text-sm text-yellow-800 items-start">
+                            <AlertTriangle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <span>{warning}</span>
+                          </div>
                         ))}
-                      </AlertDescription>
-                    </Alert>
-                  )}
-                </CardContent>
-              </Card>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Parâmetros de Voo</CardTitle>
-                  <CardDescription>Performance estimada do foguete</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-sm text-muted-foreground">Massa de Propelente</span>
-                    <span className="font-semibold">{results.propellant_mass_kg?.toFixed(3) ?? 'N/A'} kg</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-sm text-muted-foreground">Altitude de Burnout</span>
-                    <span className="font-semibold">{results.burnout_altitude_m?.toFixed(1) ?? 'N/A'} m</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-sm text-muted-foreground">Velocidade de Burnout</span>
-                    <span className="font-semibold">{results.burnout_velocity_ms?.toFixed(1) ?? 'N/A'} m/s</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-sm text-muted-foreground">Número de Mach (burnout)</span>
-                    <span className="font-semibold">{results.mach_burnout?.toFixed(2) ?? 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-sm text-muted-foreground">Apogeu Estimado</span>
-                    <span className="font-semibold">{results.peak_altitude_m?.toFixed(1) ?? 'N/A'} m</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-sm text-muted-foreground">Tempo até Apogeu</span>
-                    <span className="font-semibold">{results.time_to_apogee_s?.toFixed(1) ?? 'N/A'} s</span>
-                  </div>
-                  <div className="flex justify-between border-b pb-2">
-                    <span className="text-sm text-muted-foreground">Aceleração Máxima</span>
-                    <span className="font-semibold">{results.max_acceleration_g?.toFixed(1) ?? 'N/A'} g</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Número de Influência de Arrasto (N)</span>
-                    <span className="font-semibold">{results.drag_influence_number?.toFixed(0) ?? 'N/A'}</span>
-                  </div>
-                </CardContent>
-              </Card>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle className="text-base">Parâmetros de Voo</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex justify-between items-center border-b pb-2">
+                        <span className="text-sm text-muted-foreground">Apogeu Calculado</span>
+                        <span className="font-bold">{results.peak_altitude_m?.toFixed(1)} m</span>
+                      </div>
+                      <div className="flex justify-between items-center border-b pb-2">
+                        <span className="text-sm text-muted-foreground">Velocidade Burnout</span>
+                        <span className="font-mono">{results.burnout_velocity_ms?.toFixed(1)} m/s</span>
+                      </div>
+                      <div className="flex justify-between items-center border-b pb-2">
+                        <span className="text-sm text-muted-foreground">Mach Burnout</span>
+                        <span className="font-mono">{results.mach_burnout?.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between items-center border-b pb-2">
+                        <span className="text-sm text-muted-foreground">Tempo até Apogeu</span>
+                        <span className="font-mono">{results.time_to_apogee_s?.toFixed(1)} s</span>
+                      </div>
+                      <div className="flex justify-between items-center pt-1">
+                        <span className="text-sm text-muted-foreground">Drag Number (N)</span>
+                        <span className="font-mono bg-muted px-2 py-0.5 rounded text-xs">{results.drag_influence_number?.toFixed(0)}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Fatores de Redução de Arrasto</CardTitle>
-                  <CardDescription>Aplicados aos valores ideais (arrasto zero)</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Fator de Altitude de Pico (f<sub>z</sub>)</span>
-                    <span className="font-mono">{results.drag_factors?.fz?.toFixed(3) ?? 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Fator de Altitude de Burnout (f<sub>zbo</sub>)</span>
-                    <span className="font-mono">{results.drag_factors?.fzbo?.toFixed(3) ?? 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Fator de Velocidade Máxima (f<sub>v</sub>)</span>
-                    <span className="font-mono">{results.drag_factors?.fv?.toFixed(3) ?? 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-muted-foreground">Fator de Tempo até Apogeu (f<sub>t</sub>)</span>
-                    <span className="font-mono">{results.drag_factors?.ft?.toFixed(3) ?? 'N/A'}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
+                  <Card className="h-full">
+                    <CardHeader>
+                      <CardTitle className="text-base">Fatores de Perda (Arrasto)</CardTitle>
+                      <CardDescription>Eficiência vs. Vácuo (1.0 = Ideal)</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>Altitude Pico (fz)</span>
+                          <span className="font-mono">{results.drag_factors?.fz?.toFixed(3)}</span>
+                        </div>
+                        <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                          <div className="bg-primary h-full transition-all" style={{ width: `${(results.drag_factors?.fz || 0) * 100}%` }}></div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>Velocidade Máx (fv)</span>
+                          <span className="font-mono">{results.drag_factors?.fv?.toFixed(3)}</span>
+                        </div>
+                        <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                          <div className="bg-blue-500 h-full transition-all" style={{ width: `${(results.drag_factors?.fv || 0) * 100}%` }}></div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <div className="flex justify-between text-sm">
+                          <span>Tempo Voo (ft)</span>
+                          <span className="font-mono">{results.drag_factors?.ft?.toFixed(3)}</span>
+                        </div>
+                        <div className="w-full bg-secondary h-2 rounded-full overflow-hidden">
+                          <div className="bg-green-500 h-full transition-all" style={{ width: `${(results.drag_factors?.ft || 0) * 100}%` }}></div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </>
+            )}
+
+            <Card className="mt-6 border-dashed">
+              <CardHeader>
+                <CardTitle className="text-lg">Equações do Método</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4 text-sm text-muted-foreground">
+                <p>
+                  O <strong>Drag Influence Number (N)</strong> é o principal fator de correção do método Nakka:
+                </p>
+                <div className="bg-muted p-3 rounded text-center my-2">
+                  <BlockMath math="N = \frac{C_d \cdot D^2 \cdot V_{burnout}^2}{1000 \cdot m_{vazia}}" />
+                </div>
+                <p className="text-xs text-center">
+                  (Onde <InlineMath math="D" /> é em cm, <InlineMath math="V" /> em m/s e <InlineMath math="m" /> em kg)
+                </p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
-
-      {/* Seção de teoria */}
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Fundamentos Teóricos</CardTitle>
-          <CardDescription>Equações utilizadas no método EZImpulse</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div>
-            <h3 className="font-semibold mb-2">1. Altitude de Burnout (arrasto zero)</h3>
-            <BlockMath math="z_1 = \frac{1}{2}\left(\frac{F}{\bar{m}} - g\right)t^2" />
-            <p className="text-sm text-muted-foreground mt-2">
-              Onde <InlineMath math="F" /> é o empuxo médio, <InlineMath math="\bar{m}" /> é a massa média durante a queima, 
-              e <InlineMath math="t" /> é o tempo de queima.
-            </p>
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-2">2. Velocidade de Burnout (arrasto zero)</h3>
-            <BlockMath math="V_1 = \sqrt{\frac{2z_1}{\bar{m}}(F - \bar{m}g)}" />
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-2">3. Altitude de Pico (arrasto zero)</h3>
-            <BlockMath math="z_2 = \frac{F \cdot z_1}{\bar{m} \cdot g}" />
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-2">4. Número de Influência de Arrasto</h3>
-            <BlockMath math="N = \frac{C_d \cdot D^2 \cdot V_1^2}{1000 \cdot m_d}" />
-            <p className="text-sm text-muted-foreground mt-2">
-              Onde <InlineMath math="C_d" /> é o coeficiente de arrasto, <InlineMath math="D" /> é o diâmetro em cm, 
-              <InlineMath math="V_1" /> é a velocidade de burnout em m/s, e <InlineMath math="m_d" /> é a massa vazia em kg.
-            </p>
-            <p className="text-sm text-muted-foreground mt-2">
-              <strong>Limitação:</strong> O método é válido para <InlineMath math="N < 2000" /> (foguetes de baixa/média performance).
-            </p>
-          </div>
-
-          <div>
-            <h3 className="font-semibold mb-2">5. Correção para Arrasto</h3>
-            <p className="text-sm text-muted-foreground">
-              Os valores ideais são multiplicados pelos fatores de redução obtidos do gráfico de arrasto:
-            </p>
-            <BlockMath math="z_{peak} = f_z \cdot z_2 \quad\quad z_{burnout} = f_{zbo} \cdot z_1" />
-            <BlockMath math="V_{max} = f_v \cdot V_1 \quad\quad t_{peak} = f_t \cdot t_2" />
-          </div>
-
-          <div className="bg-muted p-4 rounded-lg">
-            <h3 className="font-semibold mb-2">Referência</h3>
-            <p className="text-sm">
-              Método desenvolvido por Richard A. Nakka<br />
-              <a 
-                href="http://www.nakka-rocketry.net/articles/altcalc.pdf" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                Simplified Method for Estimating the Flight Performance of a Hobby Rocket
-              </a>
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    </TooltipProvider>
   );
 }

@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc";
-import { Loader2, Play, Info } from "lucide-react";
-import { BlockMath } from 'react-katex';
+import { Loader2, Play, Info, Shield, Ruler, Gauge, Settings } from "lucide-react";
+import { BlockMath, InlineMath } from 'react-katex';
 import 'katex/dist/katex.min.css';
 import {
   Table,
@@ -25,7 +27,54 @@ interface Params {
   te_b: number;
   d_p: number;
   df_p: number;
+  te_p: number;
 }
+
+// CORREÇÃO: Componente movido para FORA da função principal para evitar perda de foco
+const InputWithTooltip = ({
+                            id,
+                            label,
+                            value,
+                            onChange,
+                            tooltip,
+                            unit
+                          }: {
+  id: string,
+  label: string,
+  value: number,
+  onChange: (val: string) => void,
+  tooltip: React.ReactNode,
+  unit?: string
+}) => (
+  <div className="space-y-2">
+    <div className="flex items-center gap-2">
+      <Label htmlFor={id} className="font-medium text-sm">{label}</Label>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help hover:text-primary transition-colors" />
+        </TooltipTrigger>
+        <TooltipContent className="max-w-xs p-3 text-xs">
+          {tooltip}
+        </TooltipContent>
+      </Tooltip>
+    </div>
+    <div className="relative">
+      <Input
+        id={id}
+        type="number"
+        step="any"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="pr-12"
+      />
+      {unit && (
+        <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-medium pointer-events-none">
+          {unit}
+        </span>
+      )}
+    </div>
+  </div>
+);
 
 export default function VerificacaoEstrutural() {
   const [params, setParams] = useState<Params>({
@@ -34,8 +83,9 @@ export default function VerificacaoEstrutural() {
     pmax: 7,
     te_c: 150,
     te_b: 205,
-    d_p: 9.03,
-    df_p: 10,
+    d_p: 6.0,
+    df_p: 6.5,
+    te_p: 640,
   });
 
   const mutation = trpc.calculosEngenharia.verificacaoEstrutural.useMutation();
@@ -52,353 +102,321 @@ export default function VerificacaoEstrutural() {
   };
 
   return (
-    <div className="container mx-auto py-8">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Verificação Estrutural</h1>
-        <p className="text-muted-foreground">
-          Análise de tensões e dimensionamento de componentes estruturais do motor foguete
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Painel de inputs */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle>Parâmetros de Entrada</CardTitle>
-            <CardDescription>Configure as dimensões e propriedades dos materiais</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="e">Espessura (mm)</Label>
-              <Input
-                id="e"
-                type="number"
-                step="0.001"
-                value={params.e}
-                onChange={(e) => handleInputChange("e", e.target.value)}
-              />
+    <TooltipProvider delayDuration={200}>
+      <div className="container mx-auto py-8 max-w-7xl">
+        <div className="mb-8 flex flex-col gap-2">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-primary/10 rounded-xl">
+              <Shield className="h-6 w-6 text-primary" />
             </div>
+            <h1 className="text-3xl font-bold tracking-tight">Verificação Estrutural</h1>
+          </div>
+          <p className="text-muted-foreground text-lg ml-1">
+            Análise de tensões e fator de segurança para Case, Bulkhead e Parafusos.
+          </p>
+        </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="dext_c">Diâmetro Externo (mm)</Label>
-              <Input
-                id="dext_c"
-                type="number"
-                step="0.1"
-                value={params.dext_c}
-                onChange={(e) => handleInputChange("dext_c", e.target.value)}
-              />
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          {/* Painel de inputs */}
+          <Card className="lg:col-span-4 h-fit sticky top-6 shadow-md border-t-4 border-t-primary">
+            <CardHeader className="bg-muted/30 pb-4">
+              <CardTitle className="text-lg">Parâmetros de Projeto</CardTitle>
+              <CardDescription>Dimensões e propriedades dos materiais</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6 pt-6">
 
-            <div className="space-y-2">
-              <Label htmlFor="pmax">Pressão Máxima (MPa)</Label>
-              <Input
-                id="pmax"
-                type="number"
-                step="0.1"
-                value={params.pmax}
-                onChange={(e) => handleInputChange("pmax", e.target.value)}
-              />
-            </div>
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Ruler className="h-3 w-3" /> Geometria do Case
+                </h4>
+                <InputWithTooltip
+                  id="e"
+                  label="Espessura da Parede (e)"
+                  value={params.e}
+                  onChange={(v) => handleInputChange("e", v)}
+                  tooltip="Espessura da parede do tubo do motor. Determina a resistência à pressão interna."
+                  unit="mm"
+                />
+                <InputWithTooltip
+                  id="dext_c"
+                  label="Diâmetro Externo"
+                  value={params.dext_c}
+                  onChange={(v) => handleInputChange("dext_c", v)}
+                  tooltip="Diâmetro total externo do tubo do motor."
+                  unit="mm"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="te_c">Tensão de Escoamento - Case (MPa)</Label>
-              <Input
-                id="te_c"
-                type="number"
-                step="1"
-                value={params.te_c}
-                onChange={(e) => handleInputChange("te_c", e.target.value)}
-              />
-            </div>
+              <Separator />
 
-            <div className="space-y-2">
-              <Label htmlFor="te_b">Tensão de Escoamento - Bulkhead (MPa)</Label>
-              <Input
-                id="te_b"
-                type="number"
-                step="1"
-                value={params.te_b}
-                onChange={(e) => handleInputChange("te_b", e.target.value)}
-              />
-            </div>
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Gauge className="h-3 w-3" /> Cargas e Materiais
+                </h4>
+                <InputWithTooltip
+                  id="pmax"
+                  label="Pressão Máxima (MEOP)"
+                  value={params.pmax}
+                  onChange={(v) => handleInputChange("pmax", v)}
+                  tooltip="Máxima Pressão Operacional Esperada na câmara de combustão."
+                  unit="MPa"
+                />
+                <InputWithTooltip
+                  id="te_c"
+                  label="Tensão Escoamento (Case)"
+                  value={params.te_c}
+                  onChange={(v) => handleInputChange("te_c", v)}
+                  tooltip={
+                    <p>Limite elástico do material do tubo.<br/>Ex: Alumínio 6061-T6 ≈ 276 MPa.</p>
+                  }
+                  unit="MPa"
+                />
+                <InputWithTooltip
+                  id="te_b"
+                  label="Tensão Escoamento (Bulkhead)"
+                  value={params.te_b}
+                  onChange={(v) => handleInputChange("te_b", v)}
+                  tooltip="Limite elástico do material do bulkhead."
+                  unit="MPa"
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="d_p">Diâmetro do Parafuso (mm)</Label>
-              <Input
-                id="d_p"
-                type="number"
-                step="0.01"
-                value={params.d_p}
-                onChange={(e) => handleInputChange("d_p", e.target.value)}
-              />
-            </div>
+              <Separator />
 
-            <div className="space-y-2">
-              <Label htmlFor="df_p">Diâmetro do Furo (mm)</Label>
-              <Input
-                id="df_p"
-                type="number"
-                step="0.1"
-                value={params.df_p}
-                onChange={(e) => handleInputChange("df_p", e.target.value)}
-              />
-            </div>
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
+                  <Settings className="h-3 w-3" /> Fixação (Parafusos)
+                </h4>
+                <InputWithTooltip
+                  id="d_p"
+                  label="Diâmetro Nominal"
+                  value={params.d_p}
+                  onChange={(v) => handleInputChange("d_p", v)}
+                  tooltip="Diâmetro do parafuso (Ex: M6 = 6mm). Usado para calcular a área de cisalhamento."
+                  unit="mm"
+                />
+                <InputWithTooltip
+                  id="te_p"
+                  label="Tensão Escoamento"
+                  value={params.te_p}
+                  onChange={(v) => handleInputChange("te_p", v)}
+                  tooltip={<p>Limite de escoamento do material do parafuso.<br/>Ex: Aço Classe 8.8 ≈ 640 MPa.<br/>Aço Inox 304 ≈ 215 MPa.</p>}
+                  unit="MPa"
+                />
+                <InputWithTooltip
+                  id="df_p"
+                  label="Diâmetro do Furo"
+                  value={params.df_p}
+                  onChange={(v) => handleInputChange("df_p", v)}
+                  tooltip="Diâmetro do furo passante no case para os parafusos."
+                  unit="mm"
+                />
+              </div>
 
-            <Button
-              onClick={handleCalculate}
-              disabled={mutation.isPending}
-              className="w-full"
-            >
-              {mutation.isPending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Calculando...
-                </>
-              ) : (
-                <>
-                  <Play className="mr-2 h-4 w-4" />
-                  Executar Cálculo
-                </>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
+              <Button
+                onClick={handleCalculate}
+                disabled={mutation.isPending}
+                className="w-full shadow-lg hover:shadow-xl transition-all font-semibold"
+                size="lg"
+              >
+                {mutation.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Calculando...
+                  </>
+                ) : (
+                  <>
+                    <Play className="mr-2 h-5 w-5 fill-current" />
+                    Executar Verificação
+                  </>
+                )}
+              </Button>
+            </CardContent>
+          </Card>
 
-        {/* Resultados e teoria */}
-        <div className="lg:col-span-2 space-y-6">
-          <Tabs defaultValue="results">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="results">Resultados</TabsTrigger>
-              <TabsTrigger value="theory">Teoria e Fórmulas</TabsTrigger>
-            </TabsList>
+          {/* Resultados e teoria */}
+          <div className="lg:col-span-8 space-y-6">
+            <Tabs defaultValue="results" className="w-full">
+              <TabsList className="grid w-full grid-cols-2 mb-6 p-1 bg-muted/50 rounded-lg">
+                <TabsTrigger value="results">Resultados da Análise</TabsTrigger>
+                <TabsTrigger value="theory">Teoria & Fórmulas</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="results" className="space-y-4">
-              {mutation.isError && (
-                <Card className="border-red-500">
-                  <CardHeader>
-                    <CardTitle className="text-red-600">Erro no Cálculo</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-red-600">{mutation.error.message}</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {mutation.isSuccess && mutation.data && (
-                <>
-                  {/* Resultados do Case */}
-                  <Card>
+              <TabsContent value="results" className="space-y-6 animate-in fade-in-50 duration-500">
+                {mutation.isError && (
+                  <Card className="border-destructive/50 bg-destructive/5">
                     <CardHeader>
-                      <CardTitle>Análise do Case (Cilindro de Pressão)</CardTitle>
-                      <CardDescription>Tensões e fator de segurança</CardDescription>
+                      <CardTitle className="text-destructive flex items-center gap-2">
+                        <Info className="h-5 w-5" /> Erro no Cálculo
+                      </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Parâmetro</TableHead>
-                            <TableHead>Valor</TableHead>
-                            <TableHead>Unidade</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow>
-                            <TableCell>Diâmetro Interno</TableCell>
-                            <TableCell>{mutation.data.case.dint_c.toFixed(3)}</TableCell>
-                            <TableCell>mm</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell>Espessura</TableCell>
-                            <TableCell>{(mutation.data.case.espessura * 1000).toFixed(3)}</TableCell>
-                            <TableCell>mm</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell>Tensão Tangencial</TableCell>
-                            <TableCell>{(mutation.data.case.tensao_tangencial / 1e6).toFixed(3)}</TableCell>
-                            <TableCell>MPa</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell>Tensão Radial</TableCell>
-                            <TableCell>{(mutation.data.case.tensao_radial / 1e6).toFixed(3)}</TableCell>
-                            <TableCell>MPa</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell>Tensão Longitudinal</TableCell>
-                            <TableCell>{(mutation.data.case.tensao_longitudinal / 1e6).toFixed(3)}</TableCell>
-                            <TableCell>MPa</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell className="font-bold">Tensão de Von Mises</TableCell>
-                            <TableCell className="font-bold">{(mutation.data.case.tensao_von_mises / 1e6).toFixed(3)}</TableCell>
-                            <TableCell>MPa</TableCell>
-                          </TableRow>
-                          <TableRow className={mutation.data.case.fator_seguranca >= 2 ? "bg-green-50" : "bg-red-50"}>
-                            <TableCell className="font-bold">Fator de Segurança</TableCell>
-                            <TableCell className="font-bold">{mutation.data.case.fator_seguranca.toFixed(3)}</TableCell>
-                            <TableCell>-</TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                      {mutation.data.case.fator_seguranca < 2 && (
-                        <div className="mt-4 p-4 bg-red-100 text-red-800 rounded-lg flex items-start gap-2">
-                          <Info className="h-5 w-5 mt-0.5" />
-                          <div>
-                            <p className="font-semibold">Atenção: Fator de Segurança Insuficiente</p>
-                            <p className="text-sm">O fator de segurança está abaixo do recomendado (FS ≥ 2.0). Considere aumentar a espessura ou usar material com maior tensão de escoamento.</p>
+                      <p className="text-destructive">{mutation.error.message}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {mutation.isSuccess && mutation.data && (
+                  <>
+                    {/* Resultados do Case */}
+                    <Card className="overflow-hidden border-l-4 border-l-blue-500">
+                      <CardHeader className="bg-muted/20 pb-4">
+                        <CardTitle className="text-lg">Análise do Case (Cilindro)</CardTitle>
+                        <CardDescription>Tensões principais e critério de falha</CardDescription>
+                      </CardHeader>
+                      <CardContent className="pt-6">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                          <div className="p-3 bg-secondary/50 rounded-lg text-center">
+                            <p className="text-xs text-muted-foreground uppercase font-bold">Von Mises</p>
+                            <p className="text-2xl font-bold text-foreground">
+                              {(mutation.data.case.tensao_von_mises / 1e6).toFixed(2)} <span className="text-sm font-normal text-muted-foreground">MPa</span>
+                            </p>
+                          </div>
+                          <div className={`p-3 rounded-lg text-center border-2 ${mutation.data.case.fator_seguranca >= 2 ? "bg-green-50 border-green-200 text-green-900" : "bg-red-50 border-red-200 text-red-900"}`}>
+                            <p className="text-xs opacity-80 uppercase font-bold">Fator de Segurança</p>
+                            <p className="text-2xl font-bold">
+                              {mutation.data.case.fator_seguranca.toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="p-3 bg-secondary/50 rounded-lg text-center">
+                            <p className="text-xs text-muted-foreground uppercase font-bold">Diâmetro Interno</p>
+                            <p className="text-2xl font-bold text-foreground">
+                              {mutation.data.case.dint_c.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">mm</span>
+                            </p>
                           </div>
                         </div>
-                      )}
+
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Componente de Tensão</TableHead>
+                              <TableHead className="text-right">Valor (MPa)</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            <TableRow>
+                              <TableCell>Tensão Tangencial (Hoop)</TableCell>
+                              <TableCell className="text-right font-mono">{(mutation.data.case.tensao_tangencial / 1e6).toFixed(3)}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Tensão Radial</TableCell>
+                              <TableCell className="text-right font-mono">{(mutation.data.case.tensao_radial / 1e6).toFixed(3)}</TableCell>
+                            </TableRow>
+                            <TableRow>
+                              <TableCell>Tensão Longitudinal</TableCell>
+                              <TableCell className="text-right font-mono">{(mutation.data.case.tensao_longitudinal / 1e6).toFixed(3)}</TableCell>
+                            </TableRow>
+                          </TableBody>
+                        </Table>
+
+                        {mutation.data.case.fator_seguranca < 2 && (
+                          <div className="mt-4 p-3 bg-red-100 text-red-800 rounded-md flex items-start gap-2 text-sm border border-red-200">
+                            <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <strong>Atenção:</strong> O Fator de Segurança (FS) está abaixo de 2.0. A estrutura pode não ser segura para operação com tripulação ou em áreas habitadas.
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Resultados do Bulkhead */}
+                      <Card className="border-l-4 border-l-purple-500">
+                        <CardHeader className="bg-muted/20 py-4">
+                          <CardTitle className="text-base">Dimensionamento do Bulkhead</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                          <div className="flex flex-col items-center justify-center py-2">
+                            <span className="text-sm text-muted-foreground mb-1">Espessura Mínima Recomendada</span>
+                            <span className="text-3xl font-bold text-purple-700">
+                              {(mutation.data.bulkhead.espessura_calculada * 1000).toFixed(2)} <span className="text-lg text-muted-foreground font-normal">mm</span>
+                            </span>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Resultados dos Parafusos */}
+                      <Card className="border-l-4 border-l-orange-500">
+                        <CardHeader className="bg-muted/20 py-4">
+                          <CardTitle className="text-base">Dimensionamento da Fixação</CardTitle>
+                        </CardHeader>
+                        <CardContent className="pt-6 space-y-4">
+                          <div className="flex justify-between items-center border-b pb-2">
+                            <span className="text-sm text-muted-foreground">Força Total no Bulkhead</span>
+                            <span className="font-bold">{mutation.data.parafusos.forca.toFixed(0)} N</span>
+                          </div>
+                          <div className="flex justify-between items-center border-b pb-2">
+                            <span className="text-sm text-muted-foreground">Qtd. Parafusos (Mínima)</span>
+                            <span className="font-bold text-orange-600">{mutation.data.parafusos.numero_parafusos_arredondado} un.</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-sm text-muted-foreground">Tensão Cisalhante Limite</span>
+                            <span className="font-mono text-sm">{(mutation.data.parafusos.tensao / 1e6).toFixed(2)} MPa</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </>
+                )}
+
+                {!mutation.isSuccess && !mutation.isError && (
+                  <Card className="border-dashed border-2 bg-muted/20">
+                    <CardContent className="py-24 flex flex-col items-center text-center text-muted-foreground">
+                      <div className="bg-background p-4 rounded-full mb-4 shadow-sm">
+                        <Shield className="h-10 w-10 text-primary/50" />
+                      </div>
+                      <h3 className="text-xl font-semibold mb-2 text-foreground">Aguardando Parâmetros</h3>
+                      <p className="max-w-md mx-auto">
+                        Preencha os dados do projeto à esquerda e clique em "Executar Verificação" para analisar a integridade estrutural.
+                      </p>
                     </CardContent>
                   </Card>
+                )}
+              </TabsContent>
 
-                  {/* Resultados do Bulkhead */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Análise do Bulkhead (Tampa)</CardTitle>
-                      <CardDescription>Dimensionamento da espessura</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Parâmetro</TableHead>
-                            <TableHead>Valor</TableHead>
-                            <TableHead>Unidade</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow>
-                            <TableCell className="font-bold">Espessura Calculada</TableCell>
-                            <TableCell className="font-bold">{(mutation.data.bulkhead.espessura_calculada * 1000).toFixed(3)}</TableCell>
-                            <TableCell>mm</TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-
-                  {/* Resultados dos Parafusos */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Análise dos Parafusos</CardTitle>
-                      <CardDescription>Dimensionamento e quantidade</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Parâmetro</TableHead>
-                            <TableHead>Valor</TableHead>
-                            <TableHead>Unidade</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow>
-                            <TableCell>Área Transversal Interna</TableCell>
-                            <TableCell>{mutation.data.parafusos.area_transversal.toFixed(6)}</TableCell>
-                            <TableCell>m²</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell>Força Total</TableCell>
-                            <TableCell>{mutation.data.parafusos.forca.toFixed(2)}</TableCell>
-                            <TableCell>N</TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell>Tensão no Parafuso</TableCell>
-                            <TableCell>{(mutation.data.parafusos.tensao / 1e6).toFixed(3)}</TableCell>
-                            <TableCell>MPa</TableCell>
-                          </TableRow>
-                          <TableRow className="bg-blue-50">
-                            <TableCell className="font-bold">Número de Parafusos Necessários</TableCell>
-                            <TableCell className="font-bold">{mutation.data.parafusos.numero_parafusos_arredondado}</TableCell>
-                            <TableCell>unidades</TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </CardContent>
-                  </Card>
-                </>
-              )}
-
-              {!mutation.isSuccess && !mutation.isError && (
+              <TabsContent value="theory" className="space-y-4">
                 <Card>
-                  <CardContent className="py-12 text-center text-muted-foreground">
-                    <p>Configure os parâmetros e clique em "Executar Cálculo" para ver os resultados</p>
+                  <CardHeader>
+                    <CardTitle>Tensão de Von Mises</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm text-muted-foreground">
+                    <p>
+                      Para materiais dúcteis (como alumínio e aço), a falha ocorre quando a energia de distorção atinge um limite crítico. A tensão equivalente de Von Mises combina as três tensões principais:
+                    </p>
+                    <div className="bg-muted p-4 rounded-lg overflow-x-auto text-center">
+                      <BlockMath math="\sigma_{VM} = \sqrt{\frac{(\sigma_l - \sigma_r)^2 + (\sigma_r - \sigma_t)^2 + (\sigma_t - \sigma_l)^2}{2}}" />
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1">
+                      <li><InlineMath math="\sigma_t" />: Tensão Tangencial (Hoop Stress) - Tende a rasgar o tubo longitudinalmente.</li>
+                      <li><InlineMath math="\sigma_l" />: Tensão Longitudinal - Tende a separar as bordas do tubo.</li>
+                      <li><InlineMath math="\sigma_r" />: Tensão Radial - Compressão interna devido à pressão do gás.</li>
+                    </ul>
                   </CardContent>
                 </Card>
-              )}
-            </TabsContent>
 
-            <TabsContent value="theory" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tensão de Von Mises</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">
-                    A tensão de Von Mises é usada como critério de falha para materiais dúcteis. 
-                    Ela combina as três tensões principais em um valor equivalente:
-                  </p>
-                  <div className="bg-muted p-4 rounded-lg overflow-x-auto">
-                    <BlockMath math="\sigma_{VM} = \sqrt{\frac{(\sigma_l - \sigma_r)^2 + (\sigma_r - \sigma_t)^2 + (\sigma_t - \sigma_l)^2}{2}}" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Onde σ<sub>l</sub> é a tensão longitudinal, σ<sub>r</sub> é a tensão radial e σ<sub>t</sub> é a tensão tangencial.
-                  </p>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Tensões em Vasos de Pressão</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    <div>
-                      <p className="font-semibold mb-2">Tensão Tangencial (Circunferencial):</p>
-                      <div className="bg-muted p-4 rounded-lg overflow-x-auto">
-                        <BlockMath math="\sigma_t = \frac{P \cdot r_i^2}{r_e^2 - r_i^2} \left(1 + \frac{r_e^2}{r_i^2}\right)" />
-                      </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Cisalhamento em Parafusos</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4 text-sm text-muted-foreground">
+                    <p>
+                      Parafusos submetidos a pressão interna em cilindros sofrem cisalhamento simples. A tensão de escoamento ao cisalhamento (<InlineMath math="\tau_{e}" />) é estimada pelo critério de Von Mises a partir da tensão de tração (<InlineMath math="\sigma_{e}" />):
+                    </p>
+                    <div className="bg-muted p-4 rounded-lg overflow-x-auto text-center">
+                      <BlockMath math="\tau_{e} = \frac{\sigma_{e}}{\sqrt{3}} \approx 0.577 \cdot \sigma_{e}" />
                     </div>
-
-                    <div>
-                      <p className="font-semibold mb-2">Tensão Longitudinal:</p>
-                      <div className="bg-muted p-4 rounded-lg overflow-x-auto">
-                        <BlockMath math="\sigma_l = \frac{2P \cdot r_i^2}{r_e^2 - r_i^2}" />
-                      </div>
+                    <p>O número de parafusos é calculado para garantir um Fator de Segurança (FS) sobre esta tensão limite:</p>
+                    <div className="bg-muted p-4 rounded-lg overflow-x-auto text-center">
+                      <BlockMath math="N_{parafusos} = \frac{F_{total} \cdot FS}{A_{parafuso} \cdot \tau_{e}}" />
                     </div>
-
-                    <div>
-                      <p className="font-semibold mb-2">Tensão Radial:</p>
-                      <div className="bg-muted p-4 rounded-lg overflow-x-auto">
-                        <BlockMath math="\sigma_r = \frac{P \cdot r_i^2}{r_e^2 - r_i^2} \left(1 - \frac{r_i^2}{r_e^2}\right)" />
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Fator de Segurança</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <p className="text-muted-foreground">
-                    O fator de segurança relaciona a tensão de escoamento do material com a tensão atuante:
-                  </p>
-                  <div className="bg-muted p-4 rounded-lg overflow-x-auto">
-                    <BlockMath math="FS = \frac{\sigma_{escoamento}}{\sigma_{VM}}" />
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Para aplicações aeroespaciais, recomenda-se FS ≥ 2.0 para garantir segurança adequada.
-                  </p>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }

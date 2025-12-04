@@ -7,28 +7,28 @@ export default function Home() {
   const features = [
     {
       icon: Video,
-      title: "Video-aulas interativas",
+      title: "Video-Aulas sobre Propulsão",
       description: "Aprenda os fundamentos da propulsão de foguetes com vídeos e questionários",
       link: "/video-aulas",
       color: "text-blue-600"
     },
     {
       icon: Shield,
-      title: "Verificação estrutural",
+      title: "Verificação Estrutural",
       description: "Análise de tensões e dimensionamento de componentes estruturais",
       link: "/verificacao",
       color: "text-green-600"
     },
     {
       icon: Zap,
-      title: "Design de tubeiras",
+      title: "Design de Tubeiras",
       description: "Projeto e otimização de tubeiras cônicas e parabólicas",
       link: "/tubeiras",
       color: "text-orange-600"
     },
     {
       icon: TrendingUp,
-      title: "Cálculo de requerimentos",
+      title: "Cálculo de Requerimentos",
       description: "Aplicação da planilha EZImpulse para predição de requisitos de motor-foguete",
       link: "/performance",
       color: "text-purple-600"
@@ -47,7 +47,7 @@ export default function Home() {
             Escola Foguete
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl">
-            Plataforma completa para ensino e cálculos de engenharia de foguetes.
+            Plataforma completa para ensino e cálculos de engenharia de foguetes
           </p>
           <div className="flex gap-4 mt-8">
             <Link href="/video-aulas">

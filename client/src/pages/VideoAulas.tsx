@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { CheckCircle2, XCircle, Play } from "lucide-react";
-import { BlockMath, InlineMath } from 'react-katex';
+import { BlockMath } from 'react-katex';
 import 'katex/dist/katex.min.css';
 import { modelAnswers } from '../data/modelAnswers';
 
@@ -99,25 +99,28 @@ const questions: Question[] = [
       "Químico, Nuclear e Elétrico",
       "Todas as alternativas anteriores"
     ],
-    correctAnswer: 3
+    correctAnswer: 0
   },
   {
     id: "q5",
     videoId: "1",
     question: "Além da propulsão química, quais outras categorias de propulsão de foguetes existem? Explique os princípios básicos da propulsão nuclear e da propulsão elétrica.",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   },
   {
     id: "q6",
     videoId: "1",
     question: "Defina o conceito de empuxo em propulsão. Quais fatores influenciam a magnitude do empuxo gerado por um motor?",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   },
   {
     id: "q7",
     videoId: "1",
     question: "O que é impulso total? Como ele se relaciona com o empuxo e a duração da queima do propelente?",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   },
   {
     id: "q8",
@@ -136,13 +139,15 @@ const questions: Question[] = [
     id: "q9",
     videoId: "1",
     question: "Por que, em geral, os motores aeronáuticos são considerados mais eficientes em termos de consumo de propelente do que os motores de foguete para voos atmosféricos? Quais são as principais razões para essa diferença de eficiência?",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   },
   {
     id: "q10",
     videoId: "1",
     question: "O que representa a velocidade característica (c*) em um motor de foguete? Qual a sua importância na análise do desempenho da câmara de combustão?",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   },
 
   // Atividade 02 - Motores Sólidos
@@ -157,19 +162,22 @@ const questions: Question[] = [
     id: "q12",
     videoId: "2",
     question: "Como a pressão é gerada e mantida em um motor sólido?",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   },
   {
     id: "q13",
     videoId: "2",
     question: "Como a vazão mássica se relaciona com o impulso total?",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   },
   {
     id: "q14",
     videoId: "2",
     question: "Qual a relação entre pressão, área da garganta do bocal e vazão mássica?",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   },
 
   // Motores Híbridos - Questões Conceituais
@@ -279,19 +287,22 @@ const questions: Question[] = [
     id: "q15",
     videoId: "4",
     question: "Para um motor de foguete com fluxo mássico de 1,3 kg/s, área de saída de 35 cm² e volume específico de saída de 5,8 m³/kg, qual é a velocidade do gás na saída e qual o empuxo gerado?",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   },
   {
     id: "q16",
     videoId: "4",
     question: "Para um motor com 2,4 MPa de pressão na câmara e 2800 K de temperatura, determine a temperatura do gás na saída da tubeira. Assuma tubeira idealmente expandida com pressão de saída igual à atmosférica e k = 1,3.",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   },
   {
     id: "q17",
     videoId: "4",
     question: "Para um motor com 4000 psi na câmara e k = 1,2, determine a pressão na câmara e o número de Mach na saída da tubeira, assumindo expansão ideal.",
-    type: "open-ended"
+    type: "open-ended",
+    hasModelAnswer: true
   }
 ];
 
@@ -442,7 +453,7 @@ export default function VideoAulas() {
   return (
     <div className="container mx-auto py-8">
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2">Vídeo-Aulas Interativas</h1>
+        <h1 className="text-4xl font-bold mb-2">Video-Aulas sobre Propulsão</h1>
         <p className="text-muted-foreground">
           Aprenda os fundamentos da propulsão de foguetes através de vídeos educacionais e atividades práticas
         </p>
@@ -557,14 +568,14 @@ export default function VideoAulas() {
                               size="sm"
                               variant="outline"
                             >
-                              Verificar Resposta
+                              Ver Gabarito
                             </Button>
                           )}
 
                           {showResults[question.id] && (
                             <div className={`flex items-center gap-2 p-3 rounded-lg ${
-                              isCorrect(question) 
-                                ? 'bg-green-50 text-green-800 border border-green-200' 
+                              isCorrect(question)
+                                ? 'bg-green-50 text-green-800 border border-green-200'
                                 : 'bg-red-50 text-red-800 border border-red-200'
                             }`}>
                               {isCorrect(question) ? (
@@ -588,7 +599,7 @@ export default function VideoAulas() {
                           <div className="text-sm text-muted-foreground italic">
                             Esta é uma questão dissertativa. Reflita sobre o conteúdo do vídeo para elaborar sua resposta.
                           </div>
-                          
+
                           {question.hasModelAnswer && modelAnswers[question.id] && (
                             <>
                               <Button
@@ -597,14 +608,14 @@ export default function VideoAulas() {
                                 variant="outline"
                                 className="mt-2"
                               >
-                                {showModelAnswer[question.id] ? "Ocultar" : "Ver"} Resposta Modelo
+                                {showModelAnswer[question.id] ? "Ocultar" : "Ver"} Gabarito
                               </Button>
 
                               {showModelAnswer[question.id] && (
                                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mt-3">
                                   <div className="flex items-start gap-2 mb-2">
                                     <CheckCircle2 className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                                    <span className="font-semibold text-blue-900">Resposta Modelo:</span>
+                                    <span className="font-semibold text-blue-900">Gabarito:</span>
                                   </div>
                                   <div className="text-sm text-blue-900 whitespace-pre-wrap">
                                     {modelAnswers[question.id]}

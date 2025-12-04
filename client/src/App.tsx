@@ -17,7 +17,7 @@ function Navigation() {
   
   const navItems = [
     { path: "/", label: "Início" },
-    { path: "/video-aulas", label: "Vídeo-Aulas" },
+    { path: "/video-aulas", label: "Video-Aulas" },
     { path: "/verificacao", label: "Verificação Estrutural" },
     { path: "/tubeiras", label: "Design de Tubeiras" },
     { path: "/performance", label: "Performance" },
@@ -28,7 +28,7 @@ function Navigation() {
       <div className="container flex h-16 items-center">
         <div className="flex items-center gap-2 mr-8">
           <Rocket className="h-6 w-6" />
-          <span className="font-bold text-xl">Rocket Engineering</span>
+          <span className="font-bold text-xl">Escola Foguete</span>
         </div>
         <div className="flex gap-1">
           {navItems.map((item) => (
@@ -64,17 +64,11 @@ function Router() {
   );
 }
 
-// NOTE: About Theme
-// - First choose a default theme according to your design style (dark or light bg), than change color palette in index.css
-//   to keep consistent foreground/background color across components
-// - If you want to make theme switchable, pass `switchable` ThemeProvider and use `useTheme` hook
-
 function App() {
   return (
     <ErrorBoundary>
       <ThemeProvider
         defaultTheme="light"
-        // switchable
       >
         <TooltipProvider>
           <Toaster />
