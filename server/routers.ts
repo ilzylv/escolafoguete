@@ -4,8 +4,11 @@ import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router } from "./_core/trpc";
 import { z } from "zod";
 
+const PYTHON_API_URL = process.env.NODE_ENV === 'production'
+  ? 'https://escolafoguete.onrender.com'
+  : 'http://localhost:8000';
+
 export const appRouter = router({
-    // if you need to use socket.io, read and register route in server/_core/index.ts, all api should start with '/api/' so that the gateway can route correctly
   system: systemRouter,
   auth: router({
     me: publicProcedure.query(opts => opts.ctx.user),
@@ -31,15 +34,21 @@ export const appRouter = router({
         df_p: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const response = await fetch('http://localhost:8000/api/verificacao-estrutural', {
+        // Usa a URL correta automaticamente
+        const response = await fetch(`${PYTHON_API_URL}/api/verificacao-estrutural`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(input),
         });
-        if (!response.ok) throw new Error('Erro ao calcular verificação estrutural');
+
+        if (!response.ok) {
+          // Log para ajudar a debugar se der erro
+          console.error(`Erro na API Python (${PYTHON_API_URL}):`, response.statusText);
+          throw new Error('Erro ao calcular verificação estrutural');
+        }
         return await response.json();
       }),
-    
+
     designTubeira: publicProcedure
       .input(z.object({
         F: z.number().optional(),
@@ -51,15 +60,19 @@ export const appRouter = router({
         tipo: z.enum(['conica', 'parabolica']).optional(),
       }))
       .mutation(async ({ input }) => {
-        const response = await fetch('http://localhost:8000/api/design-tubeira', {
+        const response = await fetch(`${PYTHON_API_URL}/api/design-tubeira`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(input),
         });
-        if (!response.ok) throw new Error('Erro ao calcular design de tubeira');
+
+        if (!response.ok) {
+          console.error(`Erro na API Python (${PYTHON_API_URL}):`, response.statusText);
+          throw new Error('Erro ao calcular design de tubeira');
+        }
         return await response.json();
       }),
-    
+
     performance: publicProcedure
       .input(z.object({
         target_apogee_m: z.number().optional(),
@@ -70,12 +83,16 @@ export const appRouter = router({
         drag_coefficient: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        const response = await fetch('http://localhost:8000/api/performance', {
+        const response = await fetch(`${PYTHON_API_URL}/api/performance`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(input),
         });
-        if (!response.ok) throw new Error('Erro ao calcular performance');
+
+        if (!response.ok) {
+          console.error(`Erro na API Python (${PYTHON_API_URL}):`, response.statusText);
+          throw new Error('Erro ao calcular performance');
+        }
         return await response.json();
       }),
   }),
