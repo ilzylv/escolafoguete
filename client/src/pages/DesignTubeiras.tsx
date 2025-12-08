@@ -7,7 +7,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Separator } from "@/components/ui/separator";
-// REMOVIDO: import { trpc } from "@/lib/trpc";
 import {
   Loader2,
   Play,
@@ -46,25 +45,26 @@ interface Params {
   k: number;
   R: number;
   tipo: "conica" | "parabolica";
+  razao_expansao?: number | string; // Adicionado opcional
 }
 
 // Interface da resposta do Python
 interface DesignResult {
   geometria: {
-    x: number[];
-    r: number[];
-    areas: number[];
+    x: number[]; // Agora vem em mm do backend
+    r: number[]; // Agora vem em mm do backend
+    areas: number[]; // Agora vem em mm² do backend
   };
   parametros: {
     velocidade_exaustao: number;
     fluxo_massico: number;
     temperatura_garganta: number;
     velocidade_garganta: number;
-    raio_garganta: number;
+    raio_garganta: number; // Vem em mm
     area_garganta: number;
-    raio_saida: number;
+    raio_saida: number; // Vem em mm
     razao_expansao: number;
-    comprimento: number;
+    comprimento: number; // Vem em mm
   };
 }
 
@@ -75,14 +75,16 @@ const InputWithTooltip = ({
                             value,
                             onChange,
                             tooltip,
-                            unit
+                            unit,
+                            placeholder
                           }: {
   id: string,
   label: string,
-  value: number,
+  value: number | string,
   onChange: (val: string) => void,
   tooltip: string,
-  unit?: string
+  unit?: string,
+  placeholder?: string
 }) => (
   <div className="space-y-2">
     <div className="flex items-center gap-2">
@@ -104,6 +106,7 @@ const InputWithTooltip = ({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className="pr-12"
+        placeholder={placeholder}
       />
       {unit && (
         <span className="absolute right-3 top-2.5 text-xs text-muted-foreground font-medium pointer-events-none">
@@ -138,18 +141,23 @@ export default function DesignTubeiras() {
     k: 1.136397,
     R: 234.918,
     tipo: "conica",
+    razao_expansao: "", // Inicializado vazio
   });
 
-  // --- MUDANÇA 1: Estados Locais ---
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<DesignResult | null>(null);
 
-  // --- MUDANÇA 2: Fetch Manual ---
   const handleCalculate = async () => {
     setLoading(true);
     setError(null);
     setResult(null);
+
+    // Preparar payload: converter string vazia para null ou undefined
+    const payload = {
+      ...params,
+      razao_expansao: params.razao_expansao === "" ? undefined : Number(params.razao_expansao)
+    };
 
     try {
       const response = await fetch(`${PYTHON_API_URL}/api/design-tubeira`, {
@@ -157,7 +165,7 @@ export default function DesignTubeiras() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(params),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -179,6 +187,9 @@ export default function DesignTubeiras() {
   const handleInputChange = (field: keyof Params, value: string | number) => {
     if (field === "tipo") {
       setParams({ ...params, [field]: value as "conica" | "parabolica" });
+    } else if (field === "razao_expansao") {
+      // Permite string vazia para limpar o campo
+      setParams({ ...params, [field]: value });
     } else {
       const numValue = typeof value === "string" ? parseFloat(value) : value;
       if (!isNaN(numValue)) {
@@ -187,13 +198,14 @@ export default function DesignTubeiras() {
     }
   };
 
-  // Preparar dados para gráficos com perfil simétrico (usando 'result' em vez de mutation)
+  // Preparar dados para gráficos
+  // ATENÇÃO: Backend já retorna em mm e mm², não multiplicar novamente!
   const geometryData = result?.geometria
     ? result.geometria.x.map((x: number, i: number) => ({
-      x: x * 1000, // Converter para mm
-      r_top: result.geometria.r[i] * 1000,
-      r_bottom: -result.geometria.r[i] * 1000, // Espelhar para visualização
-      area: result.geometria.areas[i] * 1e6, // Converter para mm²
+      x: x,
+      r_top: result.geometria.r[i],
+      r_bottom: -result.geometria.r[i],
+      area: result.geometria.areas[i],
     }))
     : [];
 
@@ -238,10 +250,19 @@ export default function DesignTubeiras() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="conica">Cônica (15°)</SelectItem>
-                      <SelectItem value="parabolica">Parabólica (Otimizada)</SelectItem>
+                      <SelectItem value="parabolica">Parabólica (Rao/T.O.P)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
+
+                <InputWithTooltip
+                  id="razao_expansao"
+                  label="Razão de Expansão (Opcional)"
+                  value={params.razao_expansao || ''}
+                  onChange={(v) => handleInputChange("razao_expansao", v)}
+                  tooltip="Defina manualmente a razão de área (Ae/At) para 'cortar' a tubeira. Deixe vazio para calcular a expansão ótima ideal."
+                  placeholder="Ex: 8.0"
+                />
 
                 <InputWithTooltip
                   id="F"
@@ -313,14 +334,14 @@ export default function DesignTubeiras() {
                   label="Pressão de Saída (Pe)"
                   value={params.pe}
                   onChange={(v) => handleInputChange("pe", v)}
-                  tooltip="Pressão na saída da tubeira. Para máxima eficiência, deve ser igual à pressão atmosférica local."
+                  tooltip="Pressão ambiente para cálculo da expansão ótima (ignorada se Razão de Expansão for definida manualmente)."
                   unit="Pa"
                 />
               </div>
 
               <Button
                 onClick={handleCalculate}
-                disabled={loading} // Alterado para state loading
+                disabled={loading}
                 className="w-full text-base font-semibold shadow-lg hover:shadow-xl transition-all"
                 size="lg"
               >
@@ -394,7 +415,6 @@ export default function DesignTubeiras() {
                             />
                             <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="3 3" />
 
-                            {/* Parte Superior */}
                             <Area
                               type="monotone"
                               dataKey="r_top"
@@ -405,7 +425,6 @@ export default function DesignTubeiras() {
                               name="Parede Superior"
                             />
 
-                            {/* Parte Inferior (Espelhada) */}
                             <Area
                               type="monotone"
                               dataKey="r_bottom"
@@ -521,13 +540,13 @@ export default function DesignTubeiras() {
 
                         <div className="md:col-span-2 mt-6 pb-2 border-b mb-2">
                           <h3 className="text-sm font-bold text-primary uppercase tracking-wider flex items-center gap-2">
-                            <Ruler className="h-4 w-4" /> Geometria
+                            <Ruler className="h-4 w-4" /> Geometria (Em milímetros)
                           </h3>
                         </div>
 
                         <ResultCard
                           title="Raio da Garganta (Rt)"
-                          value={(result.parametros.raio_garganta * 1000).toFixed(2)}
+                          value={result.parametros.raio_garganta.toFixed(2)} // Backend já entrega em mm
                           unit="mm"
                           icon={Ruler}
                           colorClass="text-purple-600 bg-purple-100"
@@ -541,7 +560,7 @@ export default function DesignTubeiras() {
                         />
                         <ResultCard
                           title="Raio de Saída (Re)"
-                          value={(result.parametros.raio_saida * 1000).toFixed(2)}
+                          value={result.parametros.raio_saida.toFixed(2)} // Backend já entrega em mm
                           unit="mm"
                           icon={Ruler}
                           colorClass="text-indigo-600 bg-indigo-100"
@@ -555,7 +574,7 @@ export default function DesignTubeiras() {
                         />
                         <ResultCard
                           title="Comprimento Divergente"
-                          value={(result.parametros.comprimento * 1000).toFixed(2)}
+                          value={result.parametros.comprimento.toFixed(2)} // Backend já entrega em mm
                           unit="mm"
                           icon={Ruler}
                           colorClass="text-gray-600 bg-gray-100"
@@ -593,9 +612,6 @@ export default function DesignTubeiras() {
                     <CardTitle>Condições na Garganta</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-
-
-                    [Image of De Laval Nozzle Diagram]
 
                     <p className="text-muted-foreground">
                       Na garganta da tubeira, o escoamento atinge condições sônicas (Mach = 1).
