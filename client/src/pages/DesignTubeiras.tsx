@@ -61,7 +61,7 @@ interface DesignResult {
     temperatura_garganta: number;
     velocidade_garganta: number;
     raio_garganta: number; // Vem em mm
-    area_garganta: number;
+    area_garganta: number; // m² ou mm² dependendo do back (ajustado no display)
     raio_saida: number; // Vem em mm
     razao_expansao: number;
     comprimento: number; // Vem em mm
@@ -153,11 +153,19 @@ export default function DesignTubeiras() {
     setError(null);
     setResult(null);
 
-    // Preparar payload: converter string vazia para null ou undefined
+    // 1. CORREÇÃO CRÍTICA: Prepara o payload explicitamente
+    // Converte string vazia para null, e string numérica para float
+    const razaoNumerica = params.razao_expansao && params.razao_expansao !== ""
+      ? parseFloat(params.razao_expansao.toString())
+      : null;
+
     const payload = {
       ...params,
-      razao_expansao: params.razao_expansao === "" ? undefined : Number(params.razao_expansao)
+      razao_expansao: razaoNumerica
     };
+
+    // DEBUG: Veja no console do navegador (F12) o que está sendo enviado
+    console.log("Enviando payload para o Python:", payload);
 
     try {
       const response = await fetch(`${PYTHON_API_URL}/api/design-tubeira`, {
@@ -165,7 +173,7 @@ export default function DesignTubeiras() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload), // Usa o objeto payload tratado
       });
 
       if (!response.ok) {
@@ -553,7 +561,7 @@ export default function DesignTubeiras() {
                         />
                         <ResultCard
                           title="Área da Garganta (At)"
-                          value={(result.parametros.area_garganta * 1e6).toFixed(2)}
+                          value={(result.parametros.area_garganta * 1e6).toFixed(2)} // Ajuste para mm²
                           unit="mm²"
                           icon={Maximize}
                           colorClass="text-purple-600 bg-purple-100"
